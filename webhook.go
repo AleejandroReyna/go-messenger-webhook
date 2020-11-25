@@ -8,8 +8,44 @@ import (
 	"net/http"
 	"os"
 
+	"encoding/json"
+
 	"github.com/joho/godotenv"
 )
+
+// Message struct
+type Message struct {
+	Mid  string `json:"mid"`
+	Text string `json:"text"`
+	Nlp  struct {
+		Entities struct {
+			Sentiment []struct {
+				Confidence float64 `json:"confidence"`
+				Value      string  `json:"value"`
+			} `json:"sentiment"`
+			Greetings []struct {
+				Confidence float64 `json:"confidence"`
+				Value      string  `json:"value"`
+			} `json:"greetings"`
+		} `json:"entities"`
+		DetectedLocales []struct {
+			Locale     string  `json:"locale"`
+			Confidence float64 `json:"confidence"`
+		} `json:"detected_locales"`
+	} `json:"nlp"`
+}
+
+//Messaging struct to get messenger
+type Messaging struct {
+	Sender struct {
+		ID string `json:"id"`
+	} `json:"sender"`
+	Recipient struct {
+		ID string `json:"id"`
+	} `json:"recipient"`
+	Timestamp int64   `json:"timestamp"`
+	Message   Message `json:"message"`
+}
 
 // InputMessage we get from Messenger
 type InputMessage struct {
@@ -21,36 +57,18 @@ type InputMessage struct {
 			Title   string `json:"title"`
 			payload string `json:"payload"`
 		} `json:"payload"`
-		Messaging []struct {
-			Sender struct {
-				ID string `json:"id"`
-			} `json:"sender"`
-			Recipient struct {
-				ID string `json:"id"`
-			} `json:"recipient"`
-			Timestamp int64 `json:"timestamp"`
-			Message   struct {
-				Mid  string `json:"mid"`
-				Text string `json:"text"`
-				Nlp  struct {
-					Entities struct {
-						Sentiment []struct {
-							Confidence float64 `json:"confidence"`
-							Value      string  `json:"value"`
-						} `json:"sentiment"`
-						Greetings []struct {
-							Confidence float64 `json:"confidence"`
-							Value      string  `json:"value"`
-						} `json:"greetings"`
-					} `json:"entities"`
-					DetectedLocales []struct {
-						Locale     string  `json:"locale"`
-						Confidence float64 `json:"confidence"`
-					} `json:"detected_locales"`
-				} `json:"nlp"`
-			} `json:"message"`
-		} `json:"messaging"`
+		Messaging []Messaging `json:"messaging"`
 	} `json:"entry"`
+}
+
+// SendMessage struct
+type SendMessage struct {
+	Recipient struct {
+		ID string `json:"id"`
+	} `json:"recipient"`
+	Message struct {
+		Text string `json:"text"`
+	} `json:"message"`
 }
 
 func getEnvVariable(key string) string {
@@ -59,6 +77,17 @@ func getEnvVariable(key string) string {
 		log.Fatalf("Error loading .env file")
 	}
 	return os.Getenv(key)
+}
+
+func sendMessage(message SendMessage) {
+	fmt.Println(message)
+}
+
+func responseMessage(messaging Messaging) {
+	var newMessage SendMessage
+	newMessage.Recipient.ID = messaging.Sender.ID
+	newMessage.Message.Text = messaging.Message.Text
+	sendMessage(newMessage)
 }
 
 // HTTPHandler exported
@@ -103,7 +132,7 @@ func (h HTTPHandler) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		webhookEvent := message.Entry[0]
 		if webhookEvent.Messaging != nil {
 			for _, v := range webhookEvent.Messaging {
-				fmt.Println(v.Message.Text)
+				responseMessage(v)
 			}
 		}
 		res.WriteHeader(200)
