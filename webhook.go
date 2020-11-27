@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"os"
 
-	"encoding/json"
-
 	"github.com/joho/godotenv"
 )
 
